@@ -1,0 +1,7 @@
+# Simulation artifacts
+work/
+transcript
+*.wlf
+modelsim.ini
+*.log
+*.vstf
