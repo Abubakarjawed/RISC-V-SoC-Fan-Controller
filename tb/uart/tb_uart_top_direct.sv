@@ -7,18 +7,18 @@ module tb_uart_top_direct;
     localparam int TICK_DIVISOR  = 4;
     localparam int BIT_CLKS      = 16 * TICK_DIVISOR;
 
-    logic clk = 1'b0;
-    logic rst_n;
+    logic    clk = 1'b0;
+    logic    rst_n;
     parity_e parity_mode;
-    stop_e stop_mode;
-    logic [7:0] tx_data;
-    logic tx_start;
-    logic tx_ready;
-    logic uart_tx;
-    logic uart_rx;
-    logic [7:0] rx_data;
-    logic rx_done;
-    logic parity_err;
+    stop_e   stop_mode;
+    logic    [7:0] tx_data;
+    logic    tx_start;
+    logic    tx_ready;
+    logic    uart_tx;
+    logic    uart_rx;
+    logic    [7:0] rx_data;
+    logic    rx_done;
+    logic    parity_err;
 
     always #(CLK_PERIOD_NS / 2) clk = ~clk;
 

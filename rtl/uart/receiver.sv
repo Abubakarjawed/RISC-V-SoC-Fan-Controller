@@ -1,22 +1,22 @@
 import uart_pkg::*;
 
 module receiver (
-    input  logic    clk,
-    input  logic    rst_n,
-    input  logic    baud_tick,
-    input  logic    rx_pin,
-    input  parity_e parity_mode,
-    input  stop_e   stop_mode,
-    output logic    rx_done,
-    output logic    [7:0] rx_data,
-    output logic    parity_err
+    input  logic                    clk,
+    input  logic                    rst_n,
+    input  logic                    baud_tick,
+    input  logic                    rx_pin,
+    input  parity_e                 parity_mode,
+    input  stop_e                   stop_mode,
+    output logic                    rx_done,
+    output logic [DATA_WIDTH_8-1:0] rx_data,
+    output logic                    parity_err
 );
         
     logic rx_sync_0;
     logic rx_sync_1;
     logic [3:0] tick_count; // 4 bit counter
     logic [3:0] bit_count;
-    logic [7:0] rx_data_reg;
+    logic [DATA_WIDTH_8-1:0] rx_data_reg;
     logic parity_bit_reg;
 
     // 2 stage DFF Sync
@@ -37,10 +37,10 @@ module receiver (
         if (!rst_n) begin
             state          <= IDLE;
             rx_done        <= 1'b0;
-            rx_data        <= 8'h00;
+            rx_data        <= '0;
             tick_count     <= 4'd0;
             bit_count      <= 4'd0;
-            rx_data_reg    <= 8'h00;
+            rx_data_reg    <= '0;
             parity_bit_reg <= 1'b0;
             parity_err     <= 1'b0;        
         end else begin
