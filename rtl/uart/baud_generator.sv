@@ -1,7 +1,6 @@
-module baud_generator #(
-    parameter int unsigned CLK_HZ = 50_000_000,
-    parameter int unsigned BAUD_RATE = 115_200
-) (
+import uart_pkg::*;
+
+module baud_generator (
     input  logic clk,
     input  logic rst_n,
     output logic baud_tick

@@ -1,21 +1,21 @@
 import uart_pkg::*;
 
 module transmitter (
-    input  logic    clk,
-    input  logic    rst_n,  
-    input  logic    baud_tick,
-    input  logic    [7:0] tx_data,
-    input  logic    tx_start,
-    input  parity_e parity_mode,
-    input  stop_e   stop_mode,
-    output logic    tx_pin,
-    output logic    tx_ready
+    input  logic                    clk,
+    input  logic                    rst_n,  
+    input  logic                    baud_tick,
+    input  logic [DATA_WIDTH_8-1:0] tx_data,
+    input  logic                    tx_start,
+    input  parity_e                 parity_mode,
+    input  stop_e                   stop_mode,
+    output logic                    tx_pin,
+    output logic                    tx_ready
 );
         
     logic [3:0] tick_count; // 4 bit counter
     logic [3:0] bit_count;
-    logic [7:0] tx_data_reg;
-    logic [7:0] tx_data_original;
+    logic [DATA_WIDTH_8-1:0] tx_data_reg;
+    logic [DATA_WIDTH_8-1:0] tx_data_original;
 
     state_t state;
 
@@ -26,8 +26,8 @@ module transmitter (
             tx_ready         <= 1'b1;
             tick_count       <= 4'd0;
             bit_count        <= 4'd0;
-            tx_data_reg      <= 8'h00;
-            tx_data_original <= 8'h00;
+            tx_data_reg      <= '0;
+            tx_data_original <= '0;
         end else begin
             case (state)
                 IDLE: begin
