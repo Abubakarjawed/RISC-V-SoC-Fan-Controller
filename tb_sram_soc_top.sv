@@ -7,7 +7,7 @@ module tb_sram_soc_top;
     always #5 PCLK = ~PCLK;
 
     logic       PSEL, PENABLE, PWRITE, PREADY, PSLVERR;
-    logic [7:0] PADDR, PWDATA, PRDATA;
+    logic [31:0] PADDR, PWDATA, PRDATA;
 
     int errors = 0, pass_count = 0;
 
