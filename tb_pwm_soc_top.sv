@@ -7,7 +7,7 @@ module tb_pwm_soc_top;
     always #5 PCLK = ~PCLK;
 
     logic       PSEL, PENABLE, PWRITE, PREADY, PSLVERR;
-    logic [7:0] PADDR, PWDATA, PRDATA;
+    logic [31:0] PADDR, PWDATA, PRDATA;
     logic       pwm_out;
     logic       tach_pulse;
 
