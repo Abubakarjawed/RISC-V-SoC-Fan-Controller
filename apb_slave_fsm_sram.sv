@@ -6,10 +6,10 @@ module apb_slave_fsm_sram (
     input  logic       PSEL,
     input  logic       PENABLE,
     input  logic       PWRITE,
-    input  logic [7:0] PADDR,
-    input  logic [7:0] PWDATA,
+    input  logic [31:0] PADDR,
+    input  logic [31:0] PWDATA,
 
-    output logic [7:0] PRDATA,
+    output logic [31:0] PRDATA,
     output logic       PREADY,
     output logic       PSLVERR,
 
@@ -78,17 +78,17 @@ module apb_slave_fsm_sram (
     // ---------------------------------------------------------------
     // memory-side connections
     // ---------------------------------------------------------------
-    assign mem_addr    = PADDR;
-    assign mem_wr_data = PWDATA;
+    assign mem_addr    = PADDR[7:0];
+    assign mem_wr_data = PWDATA[7:0];
     assign mem_wr_en   = apb_write;
 
     // ---------------------------------------------------------------
     // read mux
     // ---------------------------------------------------------------
     always_comb begin
-        PRDATA = 8'h00;
+        PRDATA = 32'h0;
         if (current_state == ACCESS && !PWRITE) begin
-            PRDATA = mem_rd_data;
+            PRDATA = {24'h0, mem_rd_data};
         end
     end
 
