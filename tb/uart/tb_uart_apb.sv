@@ -24,7 +24,6 @@ module tb_uart_apb;
     logic error_flag;
     logic [DATA_WIDTH_32-1:0] read_data;
 
-
     // 100 MHz Clock Generation
     initial PCLK = 0;
     always #5ns PCLK = ~PCLK;

@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 
-module tb_uart_top_direct;
-    import uart_pkg::*;
+import uart_pkg::*;
 
+module tb_uart_top_direct;
     localparam int CLK_PERIOD_NS = 10;
     localparam int TICK_DIVISOR  = 4;
     localparam int BIT_CLKS      = 16 * TICK_DIVISOR;
