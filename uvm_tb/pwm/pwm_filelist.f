@@ -1,0 +1,9 @@
+../common/apb_if.sv
+../common/apb_pkg.sv
+pwm_if.sv
+../rtl/pwm_engine.sv
+../rtl/apb_slave_fsm_pwm.sv
+../rtl/pwm_soc_top.sv
+pwm_assertions.sv
+pwm_pkg.sv
+tb_pwm_uvm_top.sv

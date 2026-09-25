@@ -6,10 +6,10 @@ module apb_slave_fsm_pwm (
     input  logic       PSEL,
     input  logic       PENABLE,
     input  logic       PWRITE,
-    input  logic [7:0] PADDR,
-    input  logic [7:0] PWDATA,
+    input  logic [31:0] PADDR,
+    input  logic [31:0] PWDATA,
 
-    output logic [7:0] PRDATA,
+    output logic [31:0] PRDATA,
     output logic       PREADY,
     output logic       PSLVERR,
 
@@ -98,11 +98,11 @@ module apb_slave_fsm_pwm (
             period_reg     <= 8'd0;
             window_reg     <= 8'd0;
         end else if (apb_write) begin
-            case (PADDR)
-                CTRL_REG:   ctrl_reg_value <= PWDATA;
-                DUTY_REG:   duty_reg       <= PWDATA;
-                PERIOD_REG: period_reg     <= PWDATA;
-                WINDOW_REG: window_reg     <= PWDATA;
+            case (PADDR[7:0])
+                CTRL_REG:   ctrl_reg_value <= PWDATA[7:0];
+                DUTY_REG:   duty_reg       <= PWDATA[7:0];
+                PERIOD_REG: period_reg     <= PWDATA[7:0];
+                WINDOW_REG: window_reg     <= PWDATA[7:0];
                 default: ;
             endcase
         end
@@ -110,22 +110,22 @@ module apb_slave_fsm_pwm (
 
     assign engine_enable   = ctrl_reg_value[0];
     // clear_fail_safe is a single-cycle pulse exactly on the write access, not stored
-    assign clear_fail_safe = apb_write && (PADDR == CTRL_REG) && PWDATA[1];
+    assign clear_fail_safe = apb_write && (PADDR[7:0] == CTRL_REG) && PWDATA[1];
 
     // ---------------------------------------------------------------
     // read mux
     // ---------------------------------------------------------------
     always_comb begin
-        PRDATA = 8'h00;
+        PRDATA = 32'h0;
         if (current_state == ACCESS && !PWRITE) begin
-            case (PADDR)
-                CTRL_REG:   PRDATA = {6'b0, 1'b0, ctrl_reg_value[0]};
-                STATUS_REG: PRDATA = {6'b0, pwm_fail_safe_active, pwm_stall_detected};
-                DUTY_REG:   PRDATA = duty_reg;
-                PERIOD_REG: PRDATA = period_reg;
-                RPM_REG:    PRDATA = pwm_rpm_count;
-                WINDOW_REG: PRDATA = window_reg;
-                default:    PRDATA = 8'h00;
+            case (PADDR[7:0])
+                CTRL_REG:   PRDATA = {24'h0, 6'b0, 1'b0, ctrl_reg_value[0]};
+                STATUS_REG: PRDATA = {24'h0, 6'b0, pwm_fail_safe_active, pwm_stall_detected};
+                DUTY_REG:   PRDATA = {24'h0, duty_reg};
+                PERIOD_REG: PRDATA = {24'h0, period_reg};
+                RPM_REG:    PRDATA = {24'h0, pwm_rpm_count};
+                WINDOW_REG: PRDATA = {24'h0, window_reg};
+                default:    PRDATA = 32'h0;
             endcase
         end
     end
