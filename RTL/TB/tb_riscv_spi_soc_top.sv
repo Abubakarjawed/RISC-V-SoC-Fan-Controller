@@ -1,0 +1,86 @@
+`timescale 1ns/1ps
+//=============================================================
+// tb_riscv_spi_soc_top.sv
+// Directed, self-checking testbench: boots the RV32I core out
+// of reset, lets it run the preloaded program (sw/spi_test.hex)
+// which configures + drives the SPI engine over the memory-
+// mapped APB peripheral, and checks the result the core wrote
+// back into data SRAM against the expected SPI loopback byte.
+//=============================================================
+module tb_riscv_spi_soc_top;
+
+    logic PCLK = 0;
+    logic PRESETn = 0;
+    always #5 PCLK = ~PCLK;
+
+    logic SCLK, MOSI, MISO, SS_N;
+    assign MISO = MOSI;   // SPI loopback slave model
+
+    int errors = 0, pass_count = 0;
+
+    riscv_spi_soc_top #(
+        .IMEM_INIT_FILE ("sw/spi_test.hex"),
+        .IMEM_DEPTH_WORDS (256),
+        .DMEM_DEPTH_WORDS (256)
+    ) dut (
+        .PCLK    (PCLK),
+        .PRESETn (PRESETn),
+        .SCLK    (SCLK),
+        .MOSI    (MOSI),
+        .MISO    (MISO),
+        .SS_N    (SS_N)
+    );
+
+    task check(input string name, input logic cond);
+        begin
+            if (cond) begin pass_count++; $display("[PASS] %s", name); end
+            else begin errors++; $display("[FAIL] %s", name); end
+        end
+    endtask
+
+    // Peek directly into data SRAM word 0 (where the program stores
+    // the byte it read back from the SPI RX_DATA register).
+    logic [31:0] result_word;
+    always_comb result_word = {dut.u_dmem.mem3[0], dut.u_dmem.mem2[0],
+                                dut.u_dmem.mem1[0], dut.u_dmem.mem0[0]};
+
+    initial begin
+        PRESETn = 0;
+        repeat (5) @(posedge PCLK);
+
+        // Reset behaviour: core PC is held at the reset vector (0x0)
+        // for as long as PRESETn is asserted.
+        check("reset: PC held at 0x0 during reset",
+              dut.u_rv32i_core.pc_q == 32'h0);
+
+        PRESETn = 1;
+        @(posedge PCLK);
+
+        // Let the preloaded program run: LUI/ADDI/SB configure CLKDIV
+        // and CTRL, SB writes 0xA5 to TX_DATA, the core polls STATUS
+        // until RX is non-empty, then LB+SW stashes the received byte
+        // into SRAM word 0.
+        repeat (4000) @(posedge PCLK);
+
+        check("core wrote back loopback byte 0xA5",
+              result_word[7:0] == 8'hA5);
+
+        check("core parked in the terminal self-loop (no illegal instr)",
+              dut.u_rv32i_core.pc_q == 32'h34);
+
+        $display("--------------------------------------------------");
+        $display("TOTAL: %0d checks, %0d passed, %0d failed",
+                  pass_count + errors, pass_count, errors);
+        if (errors == 0) $display("RESULT: ALL TESTS PASSED");
+        else              $display("RESULT: %0d TEST(S) FAILED", errors);
+        $display("--------------------------------------------------");
+        $finish;
+    end
+
+    initial begin
+        #2_000_000;
+        $display("[FAIL] TIMEOUT");
+        $finish;
+    end
+
+endmodule
