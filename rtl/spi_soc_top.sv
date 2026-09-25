@@ -6,13 +6,13 @@ module spi_soc_top (
     input  logic       PSEL,
     input  logic       PENABLE,
     input  logic       PWRITE,
-    input  logic [7:0] PADDR,
-    input  logic [7:0] PWDATA,
-    output logic [7:0] PRDATA,
+    input  logic [31:0] PADDR,
+    input  logic [31:0] PWDATA,
+    output logic [31:0] PRDATA,
     output logic       PREADY,
     output logic       PSLVERR,
 
-    
+    // physical SPI pins
     output logic SCLK,
     output logic MOSI,
     input  logic MISO,
