@@ -11,27 +11,27 @@ module uart_apb (
     input  logic [ADDR_WIDTH_32-1:0] PADDR,
     input  logic [DATA_WIDTH_32-1:0] PWDATA,
     
-    // Outputs to APB Bus
+    // APB Outputs
     output logic [DATA_WIDTH_32-1:0] PRDATA,
     output logic                     PREADY,
     output logic                     PSLVERR,
 
-    // uart pins
-    input  logic uart_rx,
-    output logic uart_tx
+    // Internal Core Interface Signals (Connects to uart_top via SoC Top)
+    output logic                    tx_start,
+    output logic [DATA_WIDTH_8-1:0] tx_data,
+    output parity_e                 parity_mode,
+    output stop_e                   stop_mode,
+    input  logic                    tx_ready,
+    input  logic [DATA_WIDTH_8-1:0] rx_data,
+    input  logic                    rx_done,
+    input  logic                    parity_err
 );
-    // Register address offset
+
+    // Register address offsets
     localparam logic [DATA_WIDTH_8-1:0] TX_DATA = 8'h00;
     localparam logic [DATA_WIDTH_8-1:0] RX_DATA = 8'h04;
     localparam logic [DATA_WIDTH_8-1:0] STATUS  = 8'h08;
     localparam logic [DATA_WIDTH_8-1:0] CTRL    = 8'h0C;
-    
-    // Uart internal signals
-    logic tx_start;
-    logic tx_ready;
-    logic [DATA_WIDTH_8-1:0] rx_data;
-    logic uart_rx_done;
-    logic parity_err;
 
     logic tx_busy;
     logic rx_error; 
@@ -39,28 +39,32 @@ module uart_apb (
 
     assign tx_busy = ~tx_ready;
     
-    // Helper signals
+    // Address Decoding
     logic addr_tx;
     logic addr_rx;
     logic addr_status;
     logic addr_ctrl;
 
-    assign addr_tx     = (PADDR [ADDR_WIDTH_8-1:0] == TX_DATA);
-    assign addr_rx     = (PADDR [ADDR_WIDTH_8-1:0] == RX_DATA);
-    assign addr_status = (PADDR [ADDR_WIDTH_8-1:0] == STATUS);
-    assign addr_ctrl   = (PADDR [ADDR_WIDTH_8-1:0] == CTRL);
+    assign addr_tx     = (PADDR[ADDR_WIDTH_8-1:0] == TX_DATA);
+    assign addr_rx     = (PADDR[ADDR_WIDTH_8-1:0] == RX_DATA);
+    assign addr_status = (PADDR[ADDR_WIDTH_8-1:0] == STATUS);
+    assign addr_ctrl   = (PADDR[ADDR_WIDTH_8-1:0] == CTRL);
 
     assign PSLVERR     = 1'b0;
 
-    // Internal signals
+    // Internal Register Holders
     logic [DATA_WIDTH_8-1:0] tx_data_reg_value;
     logic [DATA_WIDTH_8-1:0] rx_data_reg_value;
     logic [DATA_WIDTH_8-1:0] ctrl_reg_value;
     logic [DATA_WIDTH_8-1:0] status_reg_value;
 
+    assign tx_data     = tx_data_reg_value;
+    assign parity_mode = parity_e'(ctrl_reg_value[1:0]);
+    assign stop_mode   = stop_e'(ctrl_reg_value[2]);
+
     assign status_reg_value = {5'b00000, tx_busy, rx_valid, rx_error};
 
-    // FSM Machine
+    // FSM State Machine
     typedef enum logic [1:0] {
         IDLE   = 2'b00,
         SETUP  = 2'b01,
@@ -69,18 +73,18 @@ module uart_apb (
 
     apb_state_t current_state, next_state;
 
-    // APB write/read
+    // APB Handshake Flags
     logic apb_done;
     logic apb_write;
     logic apb_read;
     logic apb_read_rx;
 
-    assign apb_done     = (current_state == ACCESS) && PSEL && PENABLE && PREADY;
-    assign apb_write    = apb_done && PWRITE;
-    assign apb_read     = apb_done && !PWRITE;
-    assign apb_read_rx  = apb_read && addr_rx;
+    assign apb_done    = (current_state == ACCESS) && PSEL && PENABLE && PREADY;
+    assign apb_write   = apb_done && PWRITE;
+    assign apb_read    = apb_done && !PWRITE;
+    assign apb_read_rx = apb_read && addr_rx;
 
-    // Sequential logic
+    // Sequential State Register
     always_ff @(posedge PCLK or negedge PRESETn) begin
         if (!PRESETn) begin
             current_state <= IDLE;
@@ -89,15 +93,15 @@ module uart_apb (
         end
     end
 
-    // State transition logic
+    // State Transition Logic
     always_comb begin
         next_state = current_state;
-        PREADY = 1'b0;
+        PREADY     = 1'b0;
         
         case (current_state)
             IDLE: begin
                 if (PSEL) begin
-                next_state = SETUP;  
+                    next_state = SETUP;  
                 end
             end
             
@@ -115,7 +119,7 @@ module uart_apb (
                 end else if (!PENABLE) begin
                     next_state = SETUP;
                 end else begin
-                    PREADY = 1'b1;
+                    PREADY     = 1'b1;
                     next_state = IDLE;
                 end
             end
@@ -124,7 +128,7 @@ module uart_apb (
         endcase
     end
 
-    // Register write control 
+    // Register Write Control 
     always_ff @(posedge PCLK or negedge PRESETn) begin
         if (!PRESETn) begin
             ctrl_reg_value    <= '0;
@@ -135,38 +139,39 @@ module uart_apb (
 
             if (apb_write) begin
                 if (addr_ctrl) begin
-                    ctrl_reg_value    <= PWDATA;
+                    ctrl_reg_value    <= PWDATA[DATA_WIDTH_8-1:0];
                 end else if (addr_tx) begin
-                    tx_data_reg_value <= PWDATA;
+                    tx_data_reg_value <= PWDATA[DATA_WIDTH_8-1:0];
                     tx_start          <= 1'b1;
                 end
             end
         end
     end
 
-    // Register read control
+    // Register Read Control
     always_ff @(posedge PCLK or negedge PRESETn) begin
         if (!PRESETn) begin
             rx_data_reg_value <= 'h0;
             rx_error          <= 1'b0;
             rx_valid          <= 1'b0;
         end else begin
-            if (uart_rx_done) begin
+            if (rx_done) begin
                 rx_data_reg_value <= rx_data;
                 rx_error          <= parity_err;
                 rx_valid          <= 1'b1;
             end else if (apb_read_rx) begin
+                rx_valid          <= 1'b0; // Clear on read
                 rx_valid          <= 1'b0;
             end
         end
     end
 
-    // APB read data status
+    // Read Data Mux
     always_comb begin 
         PRDATA = '0;
 
         if (apb_read) begin
-            case (PADDR [ADDR_WIDTH_8-1:0])
+            case (PADDR[ADDR_WIDTH_8-1:0])
                 TX_DATA: PRDATA = {24'h0, tx_data_reg_value};
                 RX_DATA: PRDATA = {24'h0, rx_data_reg_value};
                 STATUS : PRDATA = {24'h0, status_reg_value};
@@ -176,20 +181,4 @@ module uart_apb (
         end
     end
 
-    uart_top uart_top_inst (
-        .clk         (PCLK),
-        .rst_n       (PRESETn),
-        .parity_mode (parity_e'(ctrl_reg_value[1:0])),
-        .stop_mode   (stop_e'(ctrl_reg_value[2])),
-        .tx_data     (tx_data_reg_value),
-        .tx_start    (tx_start),
-        .tx_ready    (tx_ready),
-        .uart_tx     (uart_tx),
-        .uart_rx     (uart_rx),
-        .rx_data     (rx_data), 
-        .rx_done     (uart_rx_done),
-        .parity_err  (parity_err)
-    );
-
 endmodule
-
