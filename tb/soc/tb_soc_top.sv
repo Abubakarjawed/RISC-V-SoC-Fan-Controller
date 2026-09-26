@@ -85,29 +85,29 @@ module tb_soc_top;
         begin
             // Setup Phase
             @(posedge clk);
-            force dut.m_paddr   = addr;
-            force dut.m_pwdata  = data;
-            force dut.m_pwrite  = 1'b1;
-            force dut.m_psel    = 1'b1;
-            force dut.m_penable = 1'b0;
+            force dut.riscv_soc_top_inst.PADDR   = addr;
+            force dut.riscv_soc_top_inst.PWDATA  = data;
+            force dut.riscv_soc_top_inst.PWRITE  = 1'b1;
+            force dut.riscv_soc_top_inst.PSEL    = 1'b1;
+            force dut.riscv_soc_top_inst.PENABLE = 1'b0;
 
             // Access Phase
             @(posedge clk);
-            force dut.m_penable = 1'b1;
+            force dut.riscv_soc_top_inst.PENABLE = 1'b1;
 
             @(posedge clk);
-            while (!dut.m_pready) @(posedge clk);
+            while (!dut.riscv_soc_top_inst.PREADY) @(posedge clk);
 
             // Idle State & Release
-            force dut.m_psel    = 1'b0;
-            force dut.m_penable = 1'b0;
-            force dut.m_pwrite  = 1'b0;
+            force dut.riscv_soc_top_inst.PSEL    = 1'b0;
+            force dut.riscv_soc_top_inst.PENABLE = 1'b0;
+            force dut.riscv_soc_top_inst.PWRITE  = 1'b0;
 
-            release dut.m_paddr;
-            release dut.m_pwdata;
-            release dut.m_pwrite;
-            release dut.m_psel;
-            release dut.m_penable;
+            release dut.riscv_soc_top_inst.PADDR;
+            release dut.riscv_soc_top_inst.PWDATA;
+            release dut.riscv_soc_top_inst.PWRITE;
+            release dut.riscv_soc_top_inst.PSEL;
+            release dut.riscv_soc_top_inst.PENABLE;
         end
     endtask
 
@@ -121,7 +121,7 @@ module tb_soc_top;
         rst_n = 1'b1;
         #100ns;
 
-        $display("       STARTING SOC TOP-LEVEL VERIFICATION        ");
+        $display("\n       STARTING SOC TOP-LEVEL VERIFICATION        \n");
 
         // Test 1: Config SRAM Preload & Readback
         $display("[TEST 1] Config SRAM Preload & Verification...");
@@ -225,7 +225,7 @@ module tb_soc_top;
 
         #200us;
 
-        $display("   SOC VERIFICATION SUMMARY: %0d PASSED, %0d FAILED   ", pass_count, fail_count);
+        $display("\n   SOC VERIFICATION SUMMARY: %0d PASSED, %0d FAILED   \n", pass_count, fail_count);
 
         if (fail_count > 0)
             $error("SOC SIMULATION FAILED!");

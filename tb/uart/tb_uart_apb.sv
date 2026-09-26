@@ -3,7 +3,6 @@
 import uart_pkg::*;
 
 module tb_uart_apb;
-
     logic PCLK;
     logic PRESETn;
 
@@ -65,6 +64,8 @@ module tb_uart_apb;
         end
     endtask //check_read
 
+    // APB write //
+
     task apb_write_task;
         input  logic [ADDR_WIDTH_32-1:0] addr;
         input  logic [DATA_WIDTH_32-1:0] data;
@@ -97,9 +98,8 @@ module tb_uart_apb;
         end
     endtask
 
-    //----------------------------------------------------
-    // APB READ
-    //----------------------------------------------------
+    // APB read //
+
     task apb_read_task;
         input  logic [ADDR_WIDTH_32-1:0] addr;
         output logic [DATA_WIDTH_32-1:0] data;
@@ -136,10 +136,7 @@ module tb_uart_apb;
         PRESETn = 1'b1;
         #10ns;
         
-        $display("\n==================================================");
-        $display("   STARTING AUTOMATED APB-UART TEST SUITE        ");
-        $display("==================================================\n");
-
+        $display("\n   STARTING AUTOMATED APB-UART TEST SUITE        \n");
 
         // Test 1: Check Reset State of CTRL
         check_read(32'h0C, 32'h00, "CTRL (Reset State)");
@@ -173,10 +170,7 @@ module tb_uart_apb;
         // Test 5: Read STATUS (0x08) again to verify rx_valid cleared back to 0
         check_read(32'h08, 32'h00, "STATUS Read-to-Clear Check");
 
-        // Summary Report
-        $display("\n==================================================");
-        $display("   TEST RESULTS: %0d PASSED, %0d FAILED          ", pass_count, fail_count);
-        $display("==================================================\n");
+        $display("\n   TEST RESULTS: %0d PASSED, %0d FAILED          \n", pass_count, fail_count);
 
         if (fail_count > 0) begin
             $error("SIMULATION FAILED with %0d errors.", fail_count);

@@ -1,6 +1,13 @@
+`timescale 1ns/1ps
+
 import uart_pkg::*;
 
-module baud_generator (
+module baud_generator 
+#(
+    parameter int CLK_HZ    = uart_pkg::CLK_HZ,
+    parameter int BAUD_RATE = uart_pkg::BAUD_RATE        // need to chck for direct_tb
+)   
+(
     input  logic clk,
     input  logic rst_n,
     output logic baud_tick
