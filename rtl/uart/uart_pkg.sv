@@ -30,8 +30,11 @@ function automatic logic parity_bit(input logic [7:0] data, input parity_e mode)
     endcase
 endfunction
 
-parameter int unsigned CLK_HZ    = 50_000_000;
-parameter int unsigned BAUD_RATE = 115_200;
+parameter int unsigned CLK_HZ     = 50_000_000;
+parameter int unsigned BAUD_RATE  = 115_200;
+localparam realtime    CLK_PERIOD = 20ns;
+// 1 / 115200 = 8.68055 us = 8680.5555 ns
+localparam realtime    BIT_PERIOD = (1.0s / BAUD_RATE) / 1ns;
 
 parameter ADDR_WIDTH_32 = 32;
 parameter ADDR_WIDTH_8  = 8;
