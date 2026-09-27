@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 import uart_pkg::*;
 
 module receiver (
