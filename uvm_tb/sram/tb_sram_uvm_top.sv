@@ -37,13 +37,15 @@ module tb_sram_uvm_top;
     // set karta hai (env.sb.preload calls) taake model DUT ke sath sync ho.
     // ---------------------------------------------------------------
     initial begin
-        dut.u_sram_engine.mem[8'h00] = 8'h19;  // profile1 duty
-        dut.u_sram_engine.mem[8'h01] = 8'h32;  // profile1 period
-        dut.u_sram_engine.mem[8'h02] = 8'h40;  // profile2 duty
-        dut.u_sram_engine.mem[8'h03] = 8'h64;  // profile2 period
-        dut.u_sram_engine.mem[8'hFF] = 8'hAA;  // boundary
-        dut.u_sram_engine.mem[8'h0F] = 8'h00;  // isolation check
-        dut.u_sram_engine.mem[8'h11] = 8'h00;  // isolation check
+        // $deposit backdoor-load karta hai bina "driver" bane -- isliye
+        // +cover ke sath conflict nahi karta (always_ff wali mem ke sath)
+        $deposit(dut.u_sram_engine.mem[8'h00], 8'h19);  // profile1 duty
+        $deposit(dut.u_sram_engine.mem[8'h01], 8'h32);  // profile1 period
+        $deposit(dut.u_sram_engine.mem[8'h02], 8'h40);  // profile2 duty
+        $deposit(dut.u_sram_engine.mem[8'h03], 8'h64);  // profile2 period
+        $deposit(dut.u_sram_engine.mem[8'hFF], 8'hAA);  // boundary
+        $deposit(dut.u_sram_engine.mem[8'h0F], 8'h00);  // isolation check
+        $deposit(dut.u_sram_engine.mem[8'h11], 8'h00);  // isolation check
     end
 
     initial begin
