@@ -7,16 +7,16 @@ A 32-bit RISC-V (RV32I) System-on-Chip (SoC) integrated with a 4-way APB interco
 ## 🏗️ System Architecture
 
 ```
-                       +-------------------------+
-                       |      RV32I Core         |
-                       +-------------------------+
-                                   |
-                       +-------------------------+
-                       |    CPU-APB Bridge       |
-                       +-------------------------+
-                                   | (Master APB Bus)
-        +--------------------------+--------------------------+
-        |                          |                          |
+                                    +-------------------------+
+                                    |      RV32I Core         |
+                                    +-------------------------+
+                                                 |
+                                    +-------------------------+
+                                    |    CPU-APB Bridge       |
+                                    +-------------------------+
+                                                 | (Master APB Bus)
+        +--------------------------+--------------------------+---------------------------
+        |                          |                          |                          |
 +---------------+          +---------------+          +---------------+          +---------------+
 | SPI Telemetry |          | PWM Fan Ctrl  |          | Config SRAM   |          | UART Console  |
 |  (0x1000_0000)|          |  (0x1001_0000)|          |  (0x1002_0000)|          |  (0x1003_0000)|
@@ -58,6 +58,7 @@ All peripherals use 32-bit APB memory mapping:
 │   ├── pwm/                    # PWM UVM Package & Block Testbench
 │   ├── sram/                   # SRAM UVM Package & Block Testbench
 │   ├── uart/                   # UART UVM Package & Block Testbench
+│   ├── riscv/                  # RISCV UVM Package & Block Testbench
 │   └── system/                 # System UVM Top Environment (`system_pkg.sv`, `tb_system_uvm_top.sv`)
 │
 └── tb/                         # Direct SystemVerilog Testbenches & Virtual UART Terminal
@@ -76,12 +77,14 @@ The system includes multi-layer verification:
 
 * **Run Directed System UVM Test**:
   ```bash
-  vsim -c -suppress 7061 tb_system_uvm_top +UVM_TESTNAME=system_base_test -do "run -all; quit"
+  vsim -c tb_system_opt -coverage -sv_lib D:/questasim/uvm-1.2/win64/uvm_dpi +UVM_TESTNAME=system_base_test -do "run -all"
+
   ```
 
 * **Run Constrained-Random System UVM Test**:
   ```bash
-  vsim -c -suppress 7061 tb_system_uvm_top +UVM_TESTNAME=system_random_test -do "run -all; quit"
+  vsim -c tb_system_opt -coverage -sv_lib D:/questasim/uvm-1.2/win64/uvm_dpi +UVM_TESTNAME=system_random_test -do "run -all"
+
   ```
 
 ---
