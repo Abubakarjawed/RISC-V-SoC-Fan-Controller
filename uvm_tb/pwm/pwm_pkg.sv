@@ -296,6 +296,13 @@ package pwm_pkg;
         rand bit [7:0] duty;
         rand bit [7:0] period;
         rand bit [7:0] window;
+
+        // normal (valid) range: 0 < duty < period, taake pwm_out edges
+        // aayein aur scoreboard measurement check kar sake
+        constraint c_period_range { period inside {[20:200]}; }
+        constraint c_duty_valid   { duty inside {[1:period-1]}; }
+        constraint c_window_range { window inside {[100:250]}; }
+
         function new(string name = "pwm_configure_seq"); super.new(name); endfunction
 
         task body();
@@ -303,6 +310,42 @@ package pwm_pkg;
             apb_write(DUTY_REG,   duty);
             apb_write(WINDOW_REG, window);
             apb_write(CTRL_REG,   8'd1);   // enable
+        endtask
+    endclass
+
+    // Edge-case configure: duty=0 (bilkul off) ya duty>=period (bilkul on) --
+    // yeh RTL ke boundary paths hain jo pwm_assertions.sv check karta hai,
+    // lekin ab tak kisi UVM sequence ne yeh values apply nahi ki thi.
+    class pwm_configure_edge_seq extends apb_base_sequence;
+        `uvm_object_utils(pwm_configure_edge_seq)
+        rand bit [7:0] duty;
+        rand bit [7:0] period;
+        bit            edge_type; // 0 = duty=0, 1 = duty>=period
+
+        constraint c_period_range { period inside {[20:200]}; }
+        constraint c_duty_edge {
+            if (edge_type == 0) duty == 0;
+            else                duty inside {[period:255]};
+        }
+
+        function new(string name = "pwm_configure_edge_seq"); super.new(name); endfunction
+
+        task body();
+            apb_write(PERIOD_REG, period);
+            apb_write(DUTY_REG,   duty);
+            apb_write(WINDOW_REG, 8'd150);
+            apb_write(CTRL_REG,   8'd1);
+        endtask
+    endclass
+
+    // Invalid/unmapped address read -- register map ke bahar ka address,
+    // taake driver/monitor/scoreboard ke default/error branches bhi hit hon
+    class pwm_invalid_addr_seq extends apb_base_sequence;
+        `uvm_object_utils(pwm_invalid_addr_seq)
+        function new(string name = "pwm_invalid_addr_seq"); super.new(name); endfunction
+        task body();
+            bit [31:0] rd;
+            apb_read(8'hF0, rd);   // register map (0x00-0x14) se bahar
         endtask
     endclass
 
@@ -377,11 +420,13 @@ package pwm_pkg;
         endfunction
 
         task run_phase(uvm_phase phase);
-            pwm_reset_check_seq    reset_seq;
-            pwm_configure_seq      cfg_seq;
-            pwm_clear_failsafe_seq clr_seq;
-            pwm_disable_seq        dis_seq;
-            pwm_reg_read_seq       rd_seq;
+            pwm_reset_check_seq     reset_seq;
+            pwm_configure_seq       cfg_seq;
+            pwm_configure_edge_seq  edge_seq;
+            pwm_clear_failsafe_seq  clr_seq;
+            pwm_disable_seq         dis_seq;
+            pwm_reg_read_seq        rd_seq;
+            pwm_invalid_addr_seq    inv_seq;
 
             phase.raise_objection(this);
 
@@ -389,11 +434,30 @@ package pwm_pkg;
             reset_seq = pwm_reset_check_seq::type_id::create("reset_seq");
             reset_seq.start(env.agent.sequencer);
 
-            // ---- configure: period=50, duty=25 (50%), window=200 ----
+            // ---- invalid address read: default/unmapped branch cover karne ke liye ----
+            inv_seq = pwm_invalid_addr_seq::type_id::create("inv_seq");
+            inv_seq.start(env.agent.sequencer);
+
+            // ---- edge case: duty=0 (fully off) ----
+            edge_seq = pwm_configure_edge_seq::type_id::create("edge_seq0");
+            edge_seq.edge_type = 0;
+            if (!edge_seq.randomize())
+                `uvm_error("PWM_TEST", "edge_seq0 randomize failed")
+            edge_seq.start(env.agent.sequencer);
+            repeat (300) @(posedge env.agent.driver.vif.PCLK);  // is state mein settle hone dein
+
+            // ---- edge case: duty>=period (fully on) ----
+            edge_seq = pwm_configure_edge_seq::type_id::create("edge_seq1");
+            edge_seq.edge_type = 1;
+            if (!edge_seq.randomize())
+                `uvm_error("PWM_TEST", "edge_seq1 randomize failed")
+            edge_seq.start(env.agent.sequencer);
+            repeat (300) @(posedge env.agent.driver.vif.PCLK);  // is state mein settle hone dein
+
+            // ---- configure: ab randomize() se alag-alag valid values, har run pe naye ----
             cfg_seq = pwm_configure_seq::type_id::create("cfg_seq");
-            cfg_seq.duty   = 8'd25;
-            cfg_seq.period = 8'd50;
-            cfg_seq.window = 8'd200;
+            if (!cfg_seq.randomize())
+                `uvm_error("PWM_TEST", "cfg_seq randomize failed")
             cfg_seq.start(env.agent.sequencer);
 
             // ---- normal case: fan spinning, tach feeding pulses ----
