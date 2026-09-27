@@ -1,15 +1,5 @@
 `timescale 1ns/1ps
-// ===========================================================================
-// pwm_pkg : pwm_soc_top ka UVM environment.
-//
-// Register map (apb_slave_fsm_pwm.sv se):
-//   CTRL_REG   0x00 : bit0=enable, bit1=clear_fail_safe (write pulse)
-//   STATUS_REG 0x04 : bit0=stall_detected, bit1=fail_safe_active (RO)
-//   DUTY_REG   0x08 : 8-bit duty
-//   PERIOD_REG 0x0C : 8-bit period
-//   RPM_REG    0x10 : 8-bit rpm_count, latched har measurement window ke baad (RO)
-//   WINDOW_REG 0x14 : 8-bit measurement window length (PCLK cycles)
-// ===========================================================================
+
 package pwm_pkg;
     import uvm_pkg::*;
     `include "uvm_macros.svh"
@@ -44,11 +34,7 @@ package pwm_pkg;
         endfunction
     endclass
 
-    // -----------------------------------------------------------------
-    // pwm_fan_model : simulated fan. tach_pulse generate karta hai jab
-    // "spinning" set ho (test/sequence isko control karta hai) --
-    // divider bilkul directed TB ke fan model jaisa (FAN_DIV=17).
-    // -----------------------------------------------------------------
+
     class pwm_fan_model extends uvm_component;
         `uvm_component_utils(pwm_fan_model)
 
@@ -193,9 +179,7 @@ package pwm_pkg;
             end
         endfunction
 
-        // pwm_out waveform measurement, current config ke sath exact compare.
-        // (0 < duty < period range mein RTL ka pwm_out = counter<duty hai,
-        //  isliye bit-exact match expected hai.)
+
         function void write_pwm(pwm_meas_txn t);
             if (enable_cfg && duty_cfg != 0 && duty_cfg < period_cfg) begin
                 waveform_checks++;
@@ -262,11 +246,6 @@ package pwm_pkg;
         endfunction
     endclass
 
-    // -----------------------------------------------------------------
-    // Sequences (APB side only -- fan control test ke run_phase se
-    // seedha fan_model.spinning set kar ke hota hai, kyunke woh koi APB
-    // register nahi hai)
-    // -----------------------------------------------------------------
     class pwm_reset_check_seq extends apb_base_sequence;
         `uvm_object_utils(pwm_reset_check_seq)
         function new(string name = "pwm_reset_check_seq"); super.new(name); endfunction
@@ -280,9 +259,7 @@ package pwm_pkg;
         endtask
     endclass
 
-    // Generic single-register read helper: test ke run_phase se directed
-    // checks (status/rpm poll karna) karne ke liye, taake har jagah nayi
-    // sequence class na likhni pare.
+
     class pwm_reg_read_seq extends apb_base_sequence;
         `uvm_object_utils(pwm_reg_read_seq)
         bit [31:0] addr;
@@ -315,9 +292,7 @@ package pwm_pkg;
         endtask
     endclass
 
-    // Edge-case configure: duty=0 (bilkul off) ya duty>=period (bilkul on) --
-    // yeh RTL ke boundary paths hain jo pwm_assertions.sv check karta hai,
-    // lekin ab tak kisi UVM sequence ne yeh values apply nahi ki thi.
+
     class pwm_configure_edge_seq extends apb_base_sequence;
         `uvm_object_utils(pwm_configure_edge_seq)
         rand bit [7:0] duty;
@@ -401,12 +376,7 @@ package pwm_pkg;
         endfunction
     endclass
 
-    // -----------------------------------------------------------------
-    // Test : reset check -> normal generation + RPM -> stall/fail-safe
-    //        -> recovery -> disable. Timing (2500 cycles, FAN_DIV=17)
-    //        directed TB se copy ki gayi hai (already proven ke ek
-    //        measurement window pura ho jata hai).
-    // -----------------------------------------------------------------
+
     class pwm_base_test extends uvm_test;
         `uvm_component_utils(pwm_base_test)
 
@@ -456,7 +426,7 @@ package pwm_pkg;
             edge_seq.start(env.agent.sequencer);
             repeat (300) @(posedge env.agent.driver.vif.PCLK);  // is state mein settle hone dein
 
-            // ---- configure: ab randomize() se alag-alag valid values, har run pe naye ----
+           
             cfg_seq = pwm_configure_seq::type_id::create("cfg_seq");
             if (!cfg_seq.randomize())
                 `uvm_error("PWM_TEST", "cfg_seq randomize failed")
