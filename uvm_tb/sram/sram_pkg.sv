@@ -1,22 +1,11 @@
 `timescale 1ns/1ps
-// ===========================================================================
-// sram_pkg : Configuration SRAM (sram_soc_top) ka UVM environment.
-//
-// DUT: 256-byte, byte-addressable APB memory. PADDR[7:0] = address,
-// combinational read, ek cycle write. Koi CTRL/STATUS register nahi hai --
-// puri APB window hi memory hai. PSLVERR hamesha 0 hai (RTL mein hardwire).
-// ===========================================================================
+
 package sram_pkg;
     import uvm_pkg::*;
     `include "uvm_macros.svh"
     import apb_pkg::*;
 
-    // -----------------------------------------------------------------
-    // Scoreboard : golden byte-array reference model. Monitor se writes
-    // dekh kar model update karta hai, reads par model ke sath compare
-    // karta hai. Testbench (top module) jo preload karta hai wahi values
-    // config_db ke through yahan set hote hain taake model in-sync rahe.
-    // -----------------------------------------------------------------
+
     class sram_scoreboard extends uvm_subscriber #(apb_txn);
         `uvm_component_utils(sram_scoreboard)
 
@@ -28,8 +17,6 @@ package sram_pkg;
             super.new(name, parent);
         endfunction
 
-        // preload ko model mein bhi apply karo (dut.u_sram_engine.mem ko
-        // top module preload karta hai, hum sirf model side sync karte hain)
         function void preload(bit [7:0] addr, bit [7:0] data);
             golden_mem[addr] = data;
         endfunction
@@ -65,8 +52,7 @@ package sram_pkg;
     // Sequences
     // -----------------------------------------------------------------
 
-    // Reset ke baad, preload ki gayi values readback honi chahiye (SRAM
-    // reset se clear nahi hoti - real memory arrays don't clear).
+
     class sram_reset_check_seq extends apb_base_sequence;
         `uvm_object_utils(sram_reset_check_seq)
         function new(string name = "sram_reset_check_seq"); super.new(name); endfunction
@@ -120,8 +106,6 @@ package sram_pkg;
         endtask
     endclass
 
-    // Random: N iterations of random addr/data write-then-read, functional
-    // coverage ke liye address space acche se explore karta hai.
     class sram_random_seq extends apb_base_sequence;
         `uvm_object_utils(sram_random_seq)
         rand int unsigned num_iter;
@@ -230,8 +214,7 @@ package sram_pkg;
 
             phase.raise_objection(this);
 
-            // scoreboard model ko top-level preload ke sath sync karo
-            // (top TB dut.u_sram_engine.mem[...] ko directly poke karta hai)
+        
             env.sb.preload(8'h00, 8'h19); // PROFILE1_DUTY
             env.sb.preload(8'h01, 8'h32); // PROFILE1_PERIOD
             env.sb.preload(8'h02, 8'h40); // PROFILE2_DUTY
