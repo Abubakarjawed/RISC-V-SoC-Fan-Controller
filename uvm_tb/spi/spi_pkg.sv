@@ -1,24 +1,5 @@
 `timescale 1ns/1ps
-// ===========================================================================
-// spi_pkg : spi_soc_top ka UVM environment.
-//
-// Register map (apb_slave_fsm.sv / spi wrapper se):
-//   CTRL_REG   0x00 : bit0 = enable
-//   STATUS_REG 0x04 : bit0=tx_full, bit1=tx_empty, bit2=rx_full, bit3=rx_empty (RO)
-//   TX_DATA    0x08 : write pushes byte into tx_fifo (write-only)
-//   RX_DATA    0x0C : read pops byte from rx_fifo (read-only)
-//   CLKDIV     0x10 : SCLK divider
-//
-// DUT/TB topology: top module MISO ko MOSI se loopback karta hai (bilkul
-// directed tb_spi_soc_top.sv jaisa) -- isliye jo byte bheja jaye, wahi
-// byte RX FIFO mein wapas aana chahiye, same order mein. Scoreboard isi
-// FIFO-order property ko check karta hai.
-//
-// Zaroori note: RTL mein CPOL/CPHA configurable nahi hai -- ek hi fixed
-// SPI mode hai (sclk idle low, MOSI MSB-first shift). Isliye "SPI modes"
-// ka test yahan applicable nahi -- iski jagah FIFO full/empty backpressure
-// aur back-to-back transfers cover kiye gaye hain.
-// ===========================================================================
+
 package spi_pkg;
     import uvm_pkg::*;
     `include "uvm_macros.svh"
