@@ -97,7 +97,10 @@ package spi_pkg;
                 bins max     = {8'hFF};
                 bins lsb     = {8'h01};
                 bins msb     = {8'h80};
-                bins mid[]   = {[8'h02:8'h7F], [8'h81:8'hFE]};
+                // "[]" hata diya -- warna yeh ek-ek value ke liye ~250
+                // alag bins bana deta, jinhe koi bhi random test kabhi
+                // poora hit nahi kar sakta. Ab yeh ek hi range-bin hai.
+                bins mid     = {[8'h02:8'h7F], [8'h81:8'hFE]};
             }
             cp_status : coverpoint cur_txn.rdata[3:0] iff (!cur_txn.write && cur_txn.addr[7:0]==STATUS_REG) {
                 bins idle_ready   = {4'b1010}; // tx_empty, rx_empty
@@ -167,9 +170,22 @@ package spi_pkg;
         endtask
     endclass
 
+    // Sirf STATUS_REG read karta hai -- coverage ke cp_status coverpoint
+    // ko explicitly sample karne ke liye alag-alag FIFO states par
+    class spi_status_check_seq extends apb_base_sequence;
+        `uvm_object_utils(spi_status_check_seq)
+        function new(string name = "spi_status_check_seq"); super.new(name); endfunction
+        task body();
+            bit [31:0] rd;
+            apb_read(STATUS_REG, rd);
+        endtask
+    endclass
+
     // Back-to-back: TX FIFO (depth 4) ko ek sath 4 bytes se bhar do (koi
     // beech mein RX read nahi), phir sab 4 wapas parho. FIFO-full
     // backpressure (PREADY stall on full) is tarah exercise hoti hai.
+    // STATUS_REG bhi bich mein read karte hain taake tx_full/rx_full
+    // bins bhi hit hon (pehle sirf idle wala bin hit ho raha tha).
     class spi_burst_seq extends apb_base_sequence;
         `uvm_object_utils(spi_burst_seq)
         function new(string name = "spi_burst_seq"); super.new(name); endfunction
@@ -178,12 +194,14 @@ package spi_pkg;
             bit [7:0]  burst [4] = '{8'h11, 8'h22, 8'h33, 8'h44};
             bit [31:0] rd;
             foreach (burst[i]) apb_write(TX_DATA, burst[i]);
+            apb_read(STATUS_REG, rd);   // yahan FIFO full/rx-filled state expected
             foreach (burst[i]) begin
                 apb_read(RX_DATA, rd);
                 if (rd[7:0] !== burst[i])
                     `uvm_error("SPI_SEQ", $sformatf(
                         "burst mismatch at index %0d: sent=0x%0h got=0x%0h", i, burst[i], rd[7:0]))
             end
+            apb_read(STATUS_REG, rd);   // ab wapas empty/idle state
         endtask
     endclass
 
@@ -254,11 +272,12 @@ package spi_pkg;
         endfunction
 
         task run_phase(uvm_phase phase);
-            spi_reset_check_seq reset_seq;
-            spi_init_seq        init_seq;
-            spi_directed_seq    dir_seq;
-            spi_burst_seq       burst_seq;
-            spi_random_seq      rand_seq;
+            spi_reset_check_seq  reset_seq;
+            spi_init_seq         init_seq;
+            spi_directed_seq     dir_seq;
+            spi_burst_seq        burst_seq;
+            spi_random_seq       rand_seq;
+            spi_status_check_seq stat_seq;
 
             phase.raise_objection(this);
 
@@ -272,6 +291,12 @@ package spi_pkg;
 
             dir_seq = spi_directed_seq::type_id::create("dir_seq");
             dir_seq.start(env.agent.sequencer);
+
+            // dir_seq har byte turant likh kar turant parh leta hai, isliye
+            // is point par FIFO wapas idle hai -- status yahan bhi confirm
+            // kar lete hain (cp_status ko extra samples milte hain)
+            stat_seq = spi_status_check_seq::type_id::create("stat_seq");
+            stat_seq.start(env.agent.sequencer);
 
             burst_seq = spi_burst_seq::type_id::create("burst_seq");
             burst_seq.start(env.agent.sequencer);
