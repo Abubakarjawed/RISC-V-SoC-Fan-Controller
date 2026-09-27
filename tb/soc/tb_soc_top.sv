@@ -53,6 +53,8 @@ module tb_soc_top;
         .tx_pin (uart_rx)  // Terminal Tx connected to SoC Rx
     );
 
+    // APB protocol SVA is bound into soc_top (see uvm_tb/common/apb_assertions.sv)
+
     // Simple Virtual SPI Slave Model 
     logic [7:0] spi_slave_rx_byte = 8'h00;
     int         spi_bit_idx       = 7;

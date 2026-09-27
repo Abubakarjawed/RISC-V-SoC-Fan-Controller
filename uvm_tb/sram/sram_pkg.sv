@@ -35,7 +35,10 @@ package sram_pkg;
         endfunction
 
         function void write(apb_txn t);
-            bit [7:0] a = t.addr[7:0];
+            bit [7:0] a;
+            if (t.addr[31:16] != 16'h1002)
+                return;
+            a = t.addr[7:0];
             if (t.write) begin
                 golden_mem[a] = t.wdata[7:0];
                 `uvm_info("SRAM_SB", $sformatf("WRITE addr=0x%0h data=0x%0h", a, t.wdata[7:0]), UVM_HIGH)

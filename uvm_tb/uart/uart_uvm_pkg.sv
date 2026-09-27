@@ -35,15 +35,6 @@ package uart_uvm_pkg;
         endfunction
     endclass // uart_seq_item
 
-    // Sequencer
-    // class uart_sequencer extends uart_sequencer #(uart_seq_item);
-    //     `uvm_component_utils(uart_sequencer)
-
-    //     function new(string name = "uart_sequencer", uvm_component parent = null);
-    //         super.new(name, parent);
-    //     endfunction
-    // endclass // uart_sequencer
-
     typedef uvm_sequencer #(uart_seq_item) uart_sequencer;
 
     // APB Driver
@@ -161,6 +152,8 @@ package uart_uvm_pkg;
         endfunction
 
         function void write(uart_seq_item item);
+            if (item.addr[31:16] != 16'h1003)
+                return;
             // APB Write to TX Register -> Push to expected TX Queue
             if (item.write && (item.addr[7:0] == UART_TX_DATA)) begin
                 expected_tx_q.push_back(item.wdata[7:0]);
