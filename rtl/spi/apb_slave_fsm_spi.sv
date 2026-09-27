@@ -12,24 +12,20 @@ module apb_slave_fsm (
     output logic        PREADY,
     output logic        PSLVERR,
 
-    // ---- SPI-engine side (replaces old test-only rx_data_valid/rx_data_in) ----
-    // TX side: engine pulls bytes out of tx_fifo
+
     input  logic       tx_fifo_rd_en,   // driven by spi_engine (was hardcoded 1'b0)
     output logic [7:0] tx_fifo_rd_data, // to spi_engine.tx_fifo_rd_data
     output logic       tx_fifo_empty,   // to spi_engine.tx_fifo_empty
 
-    // RX side: engine pushes received bytes into rx_fifo
+
     input  logic       rx_fifo_wr_en,   // from spi_engine
     input  logic [7:0] rx_fifo_wr_data, // from spi_engine
     output logic       rx_fifo_full,    // to spi_engine.rx_fifo_full
 
-    // ---- new: derived control signals for spi_engine ----
     output logic        engine_enable,  // = ctrl_reg_value[0], to spi_engine.enable
     output logic        sclk_tick       // generated from clkdiv_reg_value, to spi_engine.sclk_tick
 );
-    // Register offsets - local 8-bit offsets within this peripheral's address
-    // window, compared against the lower byte of the (32-bit) PADDR, same
-    // convention as the team's uart_apb.sv.
+
     localparam logic [7:0] CTRL_REG   = 8'h00;
     localparam logic [7:0] STATUS_REG = 8'h04;
     localparam logic [7:0] TX_DATA    = 8'h08;
@@ -152,8 +148,7 @@ module apb_slave_fsm (
 
     assign engine_enable = ctrl_reg_value[0];
 
-    // sclk_tick generator: pulses once every (clkdiv_reg_value+1) PCLK cycles.
-    // spi_engine toggles SCLK on each tick -> SCLK period = 2*(clkdiv+1) PCLK cycles.
+
     logic [7:0] div_cnt;
     always_ff @(posedge PCLK or negedge PRESETn) begin
         if (!PRESETn) begin

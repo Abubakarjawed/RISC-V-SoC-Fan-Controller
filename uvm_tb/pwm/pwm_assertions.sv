@@ -1,12 +1,5 @@
 `timescale 1ns/1ps
-// ---------------------------------------------------------------------
-// pwm_assertions : `bind` ke zariye pwm_soc_top ke andar inject hoti hai,
-// isliye internal wires (engine_enable, fail_safe_active, stall_detected,
-// duty_reg) seedhe naam se milte hain -- hierarchical path likhne ki
-// zaroorat nahi. Yeh un boundary/error conditions ko cover karti hai jo
-// scoreboard (edge-based measurement) asaani se nahi pakarta, jaise
-// duty=0 ya fail-safe ke doran output force-low.
-// ---------------------------------------------------------------------
+
 module pwm_assertions (
     input logic       PCLK,
     input logic       PRESETn,

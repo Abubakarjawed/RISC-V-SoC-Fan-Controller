@@ -1,15 +1,5 @@
 `timescale 1ns/1ps
-// ===========================================================================
-// pwm_pkg : pwm_soc_top ka UVM environment.
-//
-// Register map (apb_slave_fsm_pwm.sv se):
-//   CTRL_REG   0x00 : bit0=enable, bit1=clear_fail_safe (write pulse)
-//   STATUS_REG 0x04 : bit0=stall_detected, bit1=fail_safe_active (RO)
-//   DUTY_REG   0x08 : 8-bit duty
-//   PERIOD_REG 0x0C : 8-bit period
-//   RPM_REG    0x10 : 8-bit rpm_count, latched har measurement window ke baad (RO)
-//   WINDOW_REG 0x14 : 8-bit measurement window length (PCLK cycles)
-// ===========================================================================
+
 package pwm_pkg;
     import uvm_pkg::*;
     `include "uvm_macros.svh"
@@ -22,14 +12,10 @@ package pwm_pkg;
     localparam bit [7:0] RPM_REG    = 8'h10;
     localparam bit [7:0] WINDOW_REG = 8'h14;
 
-    // scoreboard do alag streams sunta hai: APB register traffic, aur
-    // pwm_out ki measured waveform. Do naam wale analysis imps chahiye.
     `uvm_analysis_imp_decl(_apb)
     `uvm_analysis_imp_decl(_pwm)
 
-    // -----------------------------------------------------------------
-    // pwm_meas_txn : pwm_monitor ka measurement result (ek pura period)
-    // -----------------------------------------------------------------
+
     class pwm_meas_txn extends uvm_sequence_item;
         int unsigned period_cycles;
         int unsigned duty_cycles;
@@ -44,11 +30,7 @@ package pwm_pkg;
         endfunction
     endclass
 
-    // -----------------------------------------------------------------
-    // pwm_fan_model : simulated fan. tach_pulse generate karta hai jab
-    // "spinning" set ho (test/sequence isko control karta hai) --
-    // divider bilkul directed TB ke fan model jaisa (FAN_DIV=17).
-    // -----------------------------------------------------------------
+
     class pwm_fan_model extends uvm_component;
         `uvm_component_utils(pwm_fan_model)
 
@@ -94,13 +76,7 @@ package pwm_pkg;
         endtask
     endclass
 
-    // -----------------------------------------------------------------
-    // pwm_monitor : pwm_out ke rising edges dekh kar har complete period
-    // ka exact measured (period_cycles, duty_cycles) analysis port se
-    // bhejta hai. duty=0 / duty>=period ke boundary cases mein rising
-    // edge kabhi aata hi nahi -- woh cases pwm_assertions.sv mein cover
-    // hote hain, is monitor mein nahi.
-    // -----------------------------------------------------------------
+
     class pwm_monitor extends uvm_monitor;
         `uvm_component_utils(pwm_monitor)
 
@@ -178,7 +154,7 @@ package pwm_pkg;
             pwm_imp = new("pwm_imp", this);
         endfunction
 
-        // APB stream se current configuration track karo
+  
         function void write_apb(apb_txn t);
             if (t.addr[31:16] != 16'h1001)
                 return;
@@ -193,9 +169,7 @@ package pwm_pkg;
             end
         endfunction
 
-        // pwm_out waveform measurement, current config ke sath exact compare.
-        // (0 < duty < period range mein RTL ka pwm_out = counter<duty hai,
-        //  isliye bit-exact match expected hai.)
+
         function void write_pwm(pwm_meas_txn t);
             if (enable_cfg && duty_cfg != 0 && duty_cfg < period_cfg) begin
                 waveform_checks++;
@@ -262,11 +236,6 @@ package pwm_pkg;
         endfunction
     endclass
 
-    // -----------------------------------------------------------------
-    // Sequences (APB side only -- fan control test ke run_phase se
-    // seedha fan_model.spinning set kar ke hota hai, kyunke woh koi APB
-    // register nahi hai)
-    // -----------------------------------------------------------------
     class pwm_reset_check_seq extends apb_base_sequence;
         `uvm_object_utils(pwm_reset_check_seq)
         function new(string name = "pwm_reset_check_seq"); super.new(name); endfunction
@@ -280,9 +249,7 @@ package pwm_pkg;
         endtask
     endclass
 
-    // Generic single-register read helper: test ke run_phase se directed
-    // checks (status/rpm poll karna) karne ke liye, taake har jagah nayi
-    // sequence class na likhni pare.
+
     class pwm_reg_read_seq extends apb_base_sequence;
         `uvm_object_utils(pwm_reg_read_seq)
         bit [31:0] addr;
@@ -298,6 +265,13 @@ package pwm_pkg;
         rand bit [7:0] duty;
         rand bit [7:0] period;
         rand bit [7:0] window;
+
+        // normal (valid) range: 0 < duty < period, taake pwm_out edges
+        // aayein aur scoreboard measurement check kar sake
+        constraint c_period_range { period inside {[20:200]}; }
+        constraint c_duty_valid   { duty inside {[1:period-1]}; }
+        constraint c_window_range { window inside {[100:250]}; }
+
         function new(string name = "pwm_configure_seq"); super.new(name); endfunction
 
         task body();
@@ -305,6 +279,39 @@ package pwm_pkg;
             apb_write(DUTY_REG,   duty);
             apb_write(WINDOW_REG, window);
             apb_write(CTRL_REG,   8'd1);   // enable
+        endtask
+    endclass
+
+
+    class pwm_configure_edge_seq extends apb_base_sequence;
+        `uvm_object_utils(pwm_configure_edge_seq)
+        rand bit [7:0] duty;
+        rand bit [7:0] period;
+        bit            edge_type; // 0 = duty=0, 1 = duty>=period
+
+        constraint c_period_range { period inside {[20:200]}; }
+        constraint c_duty_edge {
+            if (edge_type == 0) duty == 0;
+            else                duty inside {[period:255]};
+        }
+
+        function new(string name = "pwm_configure_edge_seq"); super.new(name); endfunction
+
+        task body();
+            apb_write(PERIOD_REG, period);
+            apb_write(DUTY_REG,   duty);
+            apb_write(WINDOW_REG, 8'd150);
+            apb_write(CTRL_REG,   8'd1);
+        endtask
+    endclass
+
+
+    class pwm_invalid_addr_seq extends apb_base_sequence;
+        `uvm_object_utils(pwm_invalid_addr_seq)
+        function new(string name = "pwm_invalid_addr_seq"); super.new(name); endfunction
+        task body();
+            bit [31:0] rd;
+            apb_read(8'hF0, rd);   // register map (0x00-0x14) se bahar
         endtask
     endclass
 
@@ -358,12 +365,7 @@ package pwm_pkg;
         endfunction
     endclass
 
-    // -----------------------------------------------------------------
-    // Test : reset check -> normal generation + RPM -> stall/fail-safe
-    //        -> recovery -> disable. Timing (2500 cycles, FAN_DIV=17)
-    //        directed TB se copy ki gayi hai (already proven ke ek
-    //        measurement window pura ho jata hai).
-    // -----------------------------------------------------------------
+
     class pwm_base_test extends uvm_test;
         `uvm_component_utils(pwm_base_test)
 
@@ -379,11 +381,13 @@ package pwm_pkg;
         endfunction
 
         task run_phase(uvm_phase phase);
-            pwm_reset_check_seq    reset_seq;
-            pwm_configure_seq      cfg_seq;
-            pwm_clear_failsafe_seq clr_seq;
-            pwm_disable_seq        dis_seq;
-            pwm_reg_read_seq       rd_seq;
+            pwm_reset_check_seq     reset_seq;
+            pwm_configure_seq       cfg_seq;
+            pwm_configure_edge_seq  edge_seq;
+            pwm_clear_failsafe_seq  clr_seq;
+            pwm_disable_seq         dis_seq;
+            pwm_reg_read_seq        rd_seq;
+            pwm_invalid_addr_seq    inv_seq;
 
             phase.raise_objection(this);
 
@@ -391,11 +395,30 @@ package pwm_pkg;
             reset_seq = pwm_reset_check_seq::type_id::create("reset_seq");
             reset_seq.start(env.agent.sequencer);
 
-            // ---- configure: period=50, duty=25 (50%), window=200 ----
+            // ---- invalid address read: default/unmapped branch cover karne ke liye ----
+            inv_seq = pwm_invalid_addr_seq::type_id::create("inv_seq");
+            inv_seq.start(env.agent.sequencer);
+
+            // ---- edge case: duty=0 (fully off) ----
+            edge_seq = pwm_configure_edge_seq::type_id::create("edge_seq0");
+            edge_seq.edge_type = 0;
+            if (!edge_seq.randomize())
+                `uvm_error("PWM_TEST", "edge_seq0 randomize failed")
+            edge_seq.start(env.agent.sequencer);
+            repeat (300) @(posedge env.agent.driver.vif.PCLK);  // is state mein settle hone dein
+
+            // ---- edge case: duty>=period (fully on) ----
+            edge_seq = pwm_configure_edge_seq::type_id::create("edge_seq1");
+            edge_seq.edge_type = 1;
+            if (!edge_seq.randomize())
+                `uvm_error("PWM_TEST", "edge_seq1 randomize failed")
+            edge_seq.start(env.agent.sequencer);
+            repeat (300) @(posedge env.agent.driver.vif.PCLK);  // is state mein settle hone dein
+
+           
             cfg_seq = pwm_configure_seq::type_id::create("cfg_seq");
-            cfg_seq.duty   = 8'd25;
-            cfg_seq.period = 8'd50;
-            cfg_seq.window = 8'd200;
+            if (!cfg_seq.randomize())
+                `uvm_error("PWM_TEST", "cfg_seq randomize failed")
             cfg_seq.start(env.agent.sequencer);
 
             // ---- normal case: fan spinning, tach feeding pulses ----

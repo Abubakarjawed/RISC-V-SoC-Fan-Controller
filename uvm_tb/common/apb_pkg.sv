@@ -1,17 +1,4 @@
 `timescale 1ns/1ps
-// ===========================================================================
-// apb_pkg : common, reusable APB UVM agent.
-//
-// Yeh package teeno environments (SRAM, PWM, SPI) mein use hota hai, aur
-// Person 1 (CPU) / Person 3 (interconnect, UART) bhi isi agent ko apne
-// system-level env mein reuse kar sakte hain -- sirf virtual interface
-// alag DUT se bind karni hai.
-//
-// Driver ki timing bilkul directed testbenches (tb_sram_soc_top.sv,
-// tb_pwm_soc_top.sv, tb_spi_soc_top.sv) ke apb_write/apb_read tasks jaisi
-// hai, kyunke woh timing already RTL ke sath tested/proven hai
-// (SETUP -> ACCESS, PREADY tak wait).
-// ===========================================================================
 package apb_pkg;
     import uvm_pkg::*;
     `include "uvm_macros.svh"
@@ -49,11 +36,7 @@ package apb_pkg;
     // -----------------------------------------------------------------
     typedef uvm_sequencer #(apb_txn) apb_sequencer;
 
-    // -----------------------------------------------------------------
-    // Driver : sequencer se transactions leta hai, APB pins ko drive karta
-    // hai. Timing directed TB ke tasks se copy ki gayi hai (negedge par
-    // signals change, PENABLE agle cycle mein, PREADY tak poll).
-    // -----------------------------------------------------------------
+
     class apb_driver extends uvm_driver #(apb_txn);
         `uvm_component_utils(apb_driver)
 
@@ -124,11 +107,6 @@ package apb_pkg;
         endtask
     endclass
 
-    // -----------------------------------------------------------------
-    // Monitor : bus ko passively dekhta hai, har complete transfer
-    // (PSEL && PENABLE && PREADY) par analysis_port se transaction
-    // bhejta hai. Scoreboards aur coverage collector isi se sunte hain.
-    // -----------------------------------------------------------------
     class apb_monitor extends uvm_monitor;
         `uvm_component_utils(apb_monitor)
 
@@ -194,11 +172,7 @@ package apb_pkg;
         endfunction
     endclass
 
-    // -----------------------------------------------------------------
-    // Base sequence : write/read helper tasks. Har module (SRAM, PWM,
-    // SPI) ki sequences isi se extend hoti hain, taake har jagah
-    // start_item/finish_item dobara na likhna pare.
-    // -----------------------------------------------------------------
+
     class apb_base_sequence extends uvm_sequence #(apb_txn);
         `uvm_object_utils(apb_base_sequence)
 
