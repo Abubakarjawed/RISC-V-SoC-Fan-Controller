@@ -12,14 +12,10 @@ package pwm_pkg;
     localparam bit [7:0] RPM_REG    = 8'h10;
     localparam bit [7:0] WINDOW_REG = 8'h14;
 
-    // scoreboard do alag streams sunta hai: APB register traffic, aur
-    // pwm_out ki measured waveform. Do naam wale analysis imps chahiye.
     `uvm_analysis_imp_decl(_apb)
     `uvm_analysis_imp_decl(_pwm)
 
-    // -----------------------------------------------------------------
-    // pwm_meas_txn : pwm_monitor ka measurement result (ek pura period)
-    // -----------------------------------------------------------------
+
     class pwm_meas_txn extends uvm_sequence_item;
         int unsigned period_cycles;
         int unsigned duty_cycles;
@@ -80,13 +76,7 @@ package pwm_pkg;
         endtask
     endclass
 
-    // -----------------------------------------------------------------
-    // pwm_monitor : pwm_out ke rising edges dekh kar har complete period
-    // ka exact measured (period_cycles, duty_cycles) analysis port se
-    // bhejta hai. duty=0 / duty>=period ke boundary cases mein rising
-    // edge kabhi aata hi nahi -- woh cases pwm_assertions.sv mein cover
-    // hote hain, is monitor mein nahi.
-    // -----------------------------------------------------------------
+
     class pwm_monitor extends uvm_monitor;
         `uvm_component_utils(pwm_monitor)
 
@@ -164,7 +154,7 @@ package pwm_pkg;
             pwm_imp = new("pwm_imp", this);
         endfunction
 
-        // APB stream se current configuration track karo
+  
         function void write_apb(apb_txn t);
             if (t.addr[31:16] != 16'h1001)
                 return;
@@ -315,8 +305,7 @@ package pwm_pkg;
         endtask
     endclass
 
-    // Invalid/unmapped address read -- register map ke bahar ka address,
-    // taake driver/monitor/scoreboard ke default/error branches bhi hit hon
+
     class pwm_invalid_addr_seq extends apb_base_sequence;
         `uvm_object_utils(pwm_invalid_addr_seq)
         function new(string name = "pwm_invalid_addr_seq"); super.new(name); endfunction
