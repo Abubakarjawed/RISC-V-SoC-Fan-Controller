@@ -1,10 +1,5 @@
 `timescale 1ns/1ps
-// ===========================================================================
-// tb_sram_uvm_top : SRAM DUT ke sath UVM ko jodne wala top module.
-// Reset, clock, DUT instantiation, aur config-SRAM preload (spec: "testbench
-// preloads configuration SRAM") yahan hota hai -- bilkul directed
-// tb_sram_soc_top.sv jaisa -- phir run_test() UVM ko handover kar deta hai.
-// ===========================================================================
+
 import uvm_pkg::*;
 `include "uvm_macros.svh"
 import apb_pkg::*;
@@ -31,14 +26,9 @@ module tb_sram_uvm_top;
         .PSLVERR (bus_if.PSLVERR)
     );
 
-    // ---------------------------------------------------------------
-    // Config SRAM preload -- hierarchical poke, jaisa directed TB mein
-    // tha. Yahi values sram_base_test apne scoreboard model mein bhi
-    // set karta hai (env.sb.preload calls) taake model DUT ke sath sync ho.
-    // ---------------------------------------------------------------
+
     initial begin
-        // $deposit backdoor-load karta hai bina "driver" bane -- isliye
-        // +cover ke sath conflict nahi karta (always_ff wali mem ke sath)
+
         $deposit(dut.u_sram_engine.mem[8'h00], 8'h19);  // profile1 duty
         $deposit(dut.u_sram_engine.mem[8'h01], 8'h32);  // profile1 period
         $deposit(dut.u_sram_engine.mem[8'h02], 8'h40);  // profile2 duty
