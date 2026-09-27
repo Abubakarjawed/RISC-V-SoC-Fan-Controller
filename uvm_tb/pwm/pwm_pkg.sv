@@ -77,18 +77,18 @@ package pwm_pkg;
             forever begin
                 @(posedge vif.PCLK or negedge vif.PRESETn);
                 if (!vif.PRESETn) begin
-                    cnt <= 0;
-                    vif.tach_pulse <= 1'b0;
+                    cnt = 0;
+                    vif.tach_pulse = 1'b0;
                 end else if (!spinning) begin
-                    cnt <= 0;
-                    vif.tach_pulse <= 1'b0;
+                    cnt = 0;
+                    vif.tach_pulse = 1'b0;
                 end else if (cnt >= pulse_div - 1) begin
-                    cnt <= 0;
-                    vif.tach_pulse <= 1'b1;
+                    cnt = 0;
+                    vif.tach_pulse = 1'b1;
                     pulses_since_clear++;
                 end else begin
-                    cnt <= cnt + 1;
-                    vif.tach_pulse <= 1'b0;
+                    cnt = cnt + 1;
+                    vif.tach_pulse = 1'b0;
                 end
             end
         endtask
@@ -180,6 +180,8 @@ package pwm_pkg;
 
         // APB stream se current configuration track karo
         function void write_apb(apb_txn t);
+            if (t.addr[31:16] != 16'h1001)
+                return;
             if (t.write) begin
                 case (t.addr[7:0])
                     CTRL_REG:   enable_cfg = t.wdata[0];

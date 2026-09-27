@@ -67,3 +67,19 @@ module apb_assertions #(
         else $error("[SVA FAIL] APB Protocol Violation: PENABLE stayed high after transfer completed!");
 
 endmodule
+
+bind soc_top apb_assertions #(
+    .ADDR_WIDTH(32),
+    .DATA_WIDTH(32)
+) u_apb_assertions (
+    .PCLK    (PCLK),
+    .PRESETn (PRESETn),
+    .PSEL    (riscv_soc_top_inst.PSEL),
+    .PENABLE (riscv_soc_top_inst.PENABLE),
+    .PWRITE  (riscv_soc_top_inst.PWRITE),
+    .PADDR   (riscv_soc_top_inst.PADDR),
+    .PWDATA  (riscv_soc_top_inst.PWDATA),
+    .PRDATA  (riscv_soc_top_inst.PRDATA),
+    .PREADY  (riscv_soc_top_inst.PREADY),
+    .PSLVERR (riscv_soc_top_inst.PSLVERR)
+);

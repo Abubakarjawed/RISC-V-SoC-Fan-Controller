@@ -47,6 +47,8 @@ package spi_pkg;
         endfunction
 
         function void write(apb_txn t);
+            if (t.addr[31:16] != 16'h1000)
+                return;
             if (t.write && t.addr[7:0] == TX_DATA) begin
                 expected_q.push_back(t.wdata[7:0]);
                 `uvm_info("SPI_SB", $sformatf("TX pushed 0x%0h (queue depth=%0d)",
